@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Pulse</title>
+<style>
+/* Layout: sticky top bar, portfolio overview, hash-routed project detail. */
+:root {
+  --bg: #f5f6f4; --panel: #ffffff; --ink: #17201c; --muted: #5d6a63; --line: #dfe4e0; --soft: #eef1ee;
+  --accent: #0f6b5c; --accent-soft: #d8ece7;
+  --green: #1f8a4c; --amber: #b86e00; --red: #c2352b;
+  --human: #0f6b5c; --ai: #7a5af5; --bot: #9aa5a0;
+  --s1: #0f6b5c; --s2: #7a5af5; --s3: #d9822b; --s4: #2f80c2; --s5: #c2357a; --s6: #6b8e23;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1412; --panel: #161d1a; --ink: #e6ece9; --muted: #95a39c; --line: #26302c; --soft: #1c2521;
+    --accent: #3fbfa6; --accent-soft: #173a33;
+    --green: #47c27a; --amber: #e3a23b; --red: #ef6a5f;
+    --human: #3fbfa6; --ai: #a08bff; --bot: #6c7873;
+    --s1: #3fbfa6; --s2: #a08bff; --s3: #f0a35b; --s4: #5aa9e6; --s5: #e66aa6; --s6: #9cc356;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+a { color: var(--accent); }
+button { font: inherit; }
+.top { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); }
+.top .in { max-width: 1280px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.brand { font-weight: 700; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
+.brand svg { color: var(--accent); }
+.top .meta { color: var(--muted); font-size: 12px; margin-left: auto; }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 6px 12px; cursor: pointer; text-decoration: none; font-size: 13px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: .6; cursor: wait; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { max-width: 1280px; margin: 0 auto; padding: 20px; display: grid; gap: 20px; }
+h1 { font-size: 22px; margin: 0; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+h3 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); }
+.strip { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.stat { background: var(--panel); padding: 12px 14px; }
+.stat .v { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.stat .l { font-size: 12px; color: var(--muted); }
+.stat .v.bad { color: var(--red); } .stat .v.warn { color: var(--amber); }
+.rag { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.rag.green { background: var(--green); } .rag.amber { background: var(--amber); } .rag.red { background: var(--red); }
+.card { cursor: pointer; display: grid; gap: 10px; text-align: left; color: inherit; width: 100%; }
+.card:hover { border-color: var(--accent); }
+.card .hd { display: flex; align-items: center; gap: 8px; }
+.card .name { font-weight: 700; font-size: 15px; }
+.score { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 18px; }
+.score small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+.pill.active, .pill.passing, .pill.green { color: var(--green); }
+.pill.slowing, .pill.amber, .pill.medium { color: var(--amber); }
+.pill.stalled, .pill.failing, .pill.red, .pill.high, .pill.unknown { color: var(--red); }
+.pill.none, .pill.low, .pill.archived, .pill.empty { color: var(--muted); }
+.kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.kv div { display: grid; }
+.kv b { font-family: var(--mono); font-size: 16px; }
+.kv span { font-size: 11px; color: var(--muted); }
+.bar { height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.risk { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.risk:first-child { border-top: 0; }
+.risk .t { font-weight: 600; }
+.risk .d { grid-column: 2; color: var(--muted); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.r, th.r { text-align: right; }
+.scroll { overflow-x: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+svg text { fill: var(--muted); font: 11px var(--sans); }
+.chart { position: relative; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / .12); white-space: nowrap; z-index: 3; }
+.factor { display: grid; grid-template-columns: 120px 1fr 60px; gap: 10px; align-items: center; padding: 5px 0; }
+.factor .note { grid-column: 2 / 4; font-size: 12px; color: var(--muted); margin-top: -4px; }
+.checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; }
+.checks div::before { content: "✕ "; color: var(--red); font-weight: 700; }
+.checks div.ok::before { content: "✓ "; color: var(--green); }
+.back { text-decoration: none; font-size: 13px; }
+.langs { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 4px; }
+.empty { padding: 30px; text-align: center; color: var(--muted); }
+.err { border-color: var(--red); color: var(--red); }
+.loading { opacity: .55; transition: opacity .2s; }
+@media (max-width: 560px) { .kv { grid-template-columns: repeat(2, 1fr); } .factor { grid-template-columns: 96px 1fr 50px; } main { padding: 14px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <a class="brand" href="#/"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>Project Pulse</a>
+  <span class="meta" id="meta">Loading…</span>
+  <a class="btn" href="/api/report.md" target="_blank" rel="noopener">Status report</a>
+  <button class="btn primary" id="refresh" type="button">Refresh from GitHub</button>
+</div></header>
+<main id="app"><div class="empty">Loading project data from GitHub…</div></main>
+
+<script>
+"use strict";
+const $app = document.getElementById("app");
+const $meta = document.getElementById("meta");
+const SERIES = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
+let PORT = null;
+const cache = {};
+
+// ---------- tiny DOM helpers (textContent only, no innerHTML with data) ----------
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "style") el.setAttribute("style", v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) el.append(k instanceof Node ? k : String(k));
+  return el;
+}
+const S = (tag, attrs) => { const el = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v); return el; };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (n) => n == null ? "–" : Number(n).toLocaleString("en");
+const pct = (r) => r == null ? "–" : Math.round(r * 100) + "%";
+const ago = (iso) => { if (!iso) return "–"; const d = Math.floor((Date.now() - new Date(iso)) / 864e5); return d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago"; };
+const date = (iso) => iso ? new Date(iso).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" }) : "–";
+const short = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("en", { day: "numeric", month: "short", timeZone: "UTC" });
+const pill = (cls, text) => h("span", { class: "pill " + cls }, text);
+const link = (href, text) => href ? h("a", { href, target: "_blank", rel: "noopener" }, text) : text;
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+// ---------- charts ----------
+function tipFor(box) { let t = box.querySelector(".tip"); if (!t) { t = h("div", { class: "tip", hidden: true }); box.append(t); } return t; }
+function placeTip(box, tip, e, lines) {
+  tip.replaceChildren(...lines.map((l, i) => h("div", { style: i ? "" : "color:var(--muted)" }, l)));
+  tip.hidden = false;
+  const b = box.getBoundingClientRect();
+  let x = e.clientX - b.left + 12, y = e.clientY - b.top + 12;
+  if (x + tip.offsetWidth > b.width) x = e.clientX - b.left - tip.offsetWidth - 12;
+  tip.style.left = Math.max(0, x) + "px"; tip.style.top = Math.max(0, Math.min(y, b.height - tip.offsetHeight)) + "px";
+}
+
+function spark(values, w = 160, hgt = 32) {
+  const svg = S("svg", { width: "100%", height: hgt, viewBox: `0 0 ${w} ${hgt}`, preserveAspectRatio: "none", "aria-hidden": "true" });
+  const max = Math.max(1, ...values), bw = w / values.length;
+  values.forEach((v, i) => {
+    const bh = Math.max(v ? 2 : 1, (v / max) * (hgt - 2));
+    svg.append(S("rect", { x: i * bw + 1, y: hgt - bh, width: Math.max(1, bw - 2), height: bh, rx: 1.5, fill: css(v ? "--accent" : "--line") }));
+  });
+  return svg;
+}
+
+// stacked bars: rows [{label, parts:{key:value}}], keys [{key,label,color}]
+function stacked(rows, keys, { height = 200, labelEvery = 1 } = {}) {
+  const box = h("div", { class: "chart" });
+  const draw = () => {
+    box.querySelectorAll("svg").forEach(n => n.remove());
+    const W = Math.max(280, box.clientWidth || 600), H = height, m = { t: 14, r: 6, b: 22, l: 30 };
+    const svg = S("svg", { width: "100%", viewBox: `0 0 ${W} ${H}`, role: "img" });
+    const totals = rows.map(r => keys.reduce((s, k) => s + (r.parts[k.key] || 0), 0));
+    const max = Math.max(1, ...totals);
+    const step = max <= 5 ? 1 : Math.ceil(max / 4 / 5) * 5 || 1;
+    const top = Math.ceil(max / step) * step;
+    const y = v => H - m.b - (v / top) * (H - m.t - m.b);
+    for (let v = 0; v <= top; v += step) {
+      svg.append(S("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: css("--line") }));
+      const t = S("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }); t.textContent = v; svg.append(t);
+    }
+    const band = (W - m.l - m.r) / rows.length, bw = Math.min(28, band * 0.7);
+    const tip = tipFor(box);
+    rows.forEach((r, i) => {
+      const x = m.l + i * band + (band - bw) / 2;
+      let acc = 0;
+      const g = S("g");
+      keys.forEach(k => {
+        const v = r.parts[k.key] || 0; if (!v) return;
+        g.append(S("rect", { x, y: y(acc + v), width: bw, height: Math.max(0, y(acc) - y(acc + v) - 1), rx: 2, fill: k.color }));
+        acc += v;
+      });
+      g.append(S("rect", { x: m.l + i * band, y: m.t, width: band, height: H - m.t - m.b, fill: "transparent" }));
+      g.addEventListener("mousemove", e => placeTip(box, tip, e, [r.title || r.label, ...keys.filter(k => r.parts[k.key]).map(k => `${k.label}: ${r.parts[k.key]}`), `Total: ${totals[i]}`]));
+      g.addEventListener("mouseleave", () => { tip.hidden = true; });
+      svg.append(g);
+      if (i % labelEvery === 0) { const t = S("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }); t.textContent = r.label; svg.append(t); }
+    });
+    box.prepend(svg);
+  };
+  requestAnimationFrame(draw);
+  new ResizeObserver(() => draw()).observe(box);
+  return box;
+}
+
+function legend(keys) { return h("div", { class: "legend" }, keys.map(k => h("span", {}, h("i", { style: `background:${k.color}` }), k.label))); }
+
+function hbars(items, { color = css("--accent"), fmtV = fmt } = {}) {
+  const max = Math.max(1, ...items.map(i => i.value));
+  return h("div", { style: "display:grid;gap:8px" }, items.map(i => h("div", {},
+    h("div", { style: "display:flex;justify-content:space-between;font-size:13px" }, h("span", {}, i.label), h("span", { class: "num" }, fmtV(i.value))),
+    h("div", { class: "bar" }, h("i", { style: `width:${(i.value / max) * 100}%;background:${i.color || color}` })))));
+}
+
+// ---------- portfolio ----------
+function renderPortfolio(p) {
+  const t = p.totals;
+  const stat = (v, l, cls) => h("div", { class: "stat" }, h("div", { class: "v " + (cls || "") }, v), h("div", { class: "l" }, l));
+  const strip = h("section", { class: "strip", "aria-label": "Totals" },
+    stat(h("span", {}, h("span", { style: "color:var(--green)" }, t.green), " / ", h("span", { style: "color:var(--amber)" }, t.amber), " / ", h("span", { style: "color:var(--red)" }, t.red)), "Green / amber / red"),
+    stat(fmt(t.commits_7d), "Commits this week"),
+    stat(fmt(t.prs_merged_30d), "PRs merged (30 days)"),
+    stat(h("span", {}, fmt(t.open_prs), h("small", { class: "muted", style: "font-size:13px" }, ` (${t.stale_prs} stale)`)), "Open pull requests", t.stale_prs ? "warn" : ""),
+    stat(h("span", {}, fmt(t.open_issues), h("small", { class: "muted", style: "font-size:13px" }, ` (${t.open_bugs} bugs)`)), "Open issues"),
+    stat(fmt(t.projects_with_failing_ci), "Projects with failing CI", t.projects_with_failing_ci ? "bad" : ""),
+    stat(fmt(t.high_risks), "High-severity risks", t.high_risks ? "bad" : ""));
+
+  const cards = h("section", { class: "grid", "aria-label": "Projects" }, p.projects.map(s => {
+    const ms = s.current_milestone;
+    return h("button", { class: "panel card", type: "button", onclick: () => { location.hash = "#/p/" + s.name; } },
+      h("div", { class: "hd" }, h("span", { class: "rag " + s.rag, title: s.rag }), h("span", { class: "name" }, s.name), s.private ? pill("none", "private") : null,
+        h("span", { class: "score" }, s.error ? "–" : s.score, s.error ? null : h("small", {}, " " + s.grade))),
+      h("div", { class: "small muted" }, s.description || s.repo),
+      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, pill(s.state, s.state_label), s.kind !== "profile" && s.ci_status ? pill(s.ci_status, "CI " + s.ci_status) : null,
+        h("span", { class: "small muted", style: "margin-left:auto" }, "last commit " + ago(s.last_commit_at))),
+      h("div", {}, spark(s.weekly_commits || []), h("div", { class: "small muted" }, "Commits per week, last 12 weeks · trend " + s.trend)),
+      h("div", { class: "kv" },
+        h("div", {}, h("b", {}, fmt(s.commits_7d)), h("span", {}, "commits 7d")),
+        h("div", {}, h("b", {}, fmt(s.open_prs)), h("span", {}, `open PRs${s.stale_prs ? ` · ${s.stale_prs} stale` : ""}`)),
+        h("div", {}, h("b", {}, fmt(s.open_issues)), h("span", {}, "open issues")),
+        h("div", {}, h("b", {}, pct(s.ci_success_rate)), h("span", {}, "CI pass rate"))),
+      ms ? h("div", {}, h("div", { class: "small", style: "display:flex;justify-content:space-between" }, h("span", {}, "Milestone: " + ms.title), h("span", { class: "num" }, ms.percent + "%")), h("div", { class: "bar" }, h("i", { style: `width:${ms.percent}%` }))) : null,
+      s.top_risk ? h("div", { class: "small" }, pill(s.top_risk.severity, s.top_risk.severity), " ", s.top_risk.title) : h("div", { class: "small muted" }, "No open risks"));
+  }));
+
+  const names = p.projects.map(s => s.name);
+  const keys = names.map((n, i) => ({ key: n, label: n, color: css(SERIES[i % SERIES.length]) }));
+  const weeks = p.weekly.map(w => ({ label: short(w.week_start), title: "Week of " + short(w.week_start), parts: w.by_project }));
+  const velocity = h("section", { class: "panel" }, h("h2", {}, "Weekly commits across projects"),
+    h("div", { class: "small muted", style: "margin:-6px 0 8px" }, "Default-branch commits per week, by project. Hover a week for the breakdown."),
+    legend(keys), stacked(weeks, keys, { height: 220, labelEvery: weeks.length > 8 && innerWidth < 700 ? 2 : 1 }));
+  const focus = h("section", { class: "panel" }, h("h2", {}, "Where the work went (30 days)"),
+    h("div", { class: "small muted", style: "margin:-6px 0 12px" }, "Share of all commits in the last 30 days."),
+    hbars(p.focus_30d.map((f, i) => ({ label: f.name, value: f.commits, color: css(SERIES[names.indexOf(f.name) % SERIES.length]) })), { fmtV: v => `${v} · ${Math.round(v / Math.max(1, t.commits_30d) * 100)}%` }));
+
+  const att = h("section", { class: "panel" }, h("h2", {}, "Needs attention"),
+    p.attention.length ? h("div", {}, p.attention.map(r => h("div", { class: "risk" }, pill(r.severity, r.severity),
+      h("div", { class: "t" }, h("a", { href: "#/p/" + r.project, style: "color:inherit" }, r.project), " · ", r.url ? link(r.url, r.title) : r.title),
+      h("div", { class: "d" }, r.detail)))) : h("div", { class: "muted" }, "Nothing flagged."));
+
+  $app.replaceChildren(strip, cards, h("div", { class: "grid two" }, velocity, focus), att);
+}
+
+// ---------- project detail ----------
+function section(title, note, ...body) { return h("section", { class: "panel" }, h("h2", {}, title), note ? h("div", { class: "small muted", style: "margin:-6px 0 10px" }, note) : null, ...body); }
+
+function renderProject(r) {
+  if (r.error) {
+    $app.replaceChildren(h("a", { class: "back", href: "#/" }, "← All projects"), h("div", { class: "panel err" }, h("h2", {}, r.name), r.error));
+    return;
+  }
+  const head = h("section", { class: "panel" },
+    h("a", { class: "back", href: "#/" }, "← All projects"),
+    h("div", { style: "display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap" },
+      h("span", { class: "rag " + r.health.rag }), h("h1", {}, r.name), pill(r.status.state, r.status.label),
+      r.private ? pill("none", "private") : null,
+      h("span", { class: "score" }, r.health.score, h("small", {}, " / 100 · grade " + r.health.grade))),
+    h("div", { class: "muted", style: "margin-top:4px" }, r.description || ""),
+    h("div", { class: "small", style: "margin-top:6px" }, link(r.url, r.repo), ` · ${r.default_branch} · created ${date(r.status.repo_created_at)} (${r.status.project_age_days} days old)`),
+    r.languages.length ? h("div", {}, h("div", { class: "langs" }, r.languages.map((l, i) => h("i", { style: `width:${l.share * 100}%;background:${css(SERIES[i % SERIES.length])}`, title: l.name }))),
+      h("div", { class: "legend" }, r.languages.map((l, i) => h("span", {}, h("i", { style: `background:${css(SERIES[i % SERIES.length])}` }), `${l.name} ${Math.round(l.share * 100)}%`)))) : null,
+    r.status.last_commit_at ? h("div", { class: "small muted" }, "Last commit ", ago(r.status.last_commit_at), " by ", r.status.last_commit_by, ": ", link(r.status.last_commit_url, r.status.last_commit_title)) : null);
+
+  const health = section("Health score", "How the score is built. Factors that can't be measured are left out rather than scored zero.",
+    r.health.factors.map(f => h("div", { class: "factor" }, h("span", {}, f.name),
+      h("div", { class: "bar" }, h("i", { style: `width:${(f.score / f.max) * 100}%;background:${f.score / f.max >= .7 ? css("--green") : f.score / f.max >= .4 ? css("--amber") : css("--red")}` })),
+      h("span", { class: "num small r", style: "text-align:right" }, `${f.score}/${f.max}`), h("div", { class: "note" }, f.note))));
+
+  const risks = section("Risks and actions", null, r.risks.length ? h("div", {}, r.risks.map(k => h("div", { class: "risk" }, pill(k.severity, k.severity),
+    h("div", { class: "t" }, k.url ? link(k.url, k.title) : k.title, h("span", { class: "muted small" }, " · " + k.area)), h("div", { class: "d" }, k.detail)))) : h("div", { class: "muted" }, "Nothing flagged."));
+
+  const a = r.activity;
+  const akeys = [{ key: "human", label: "Human", color: css("--human") }, { key: "ai_assisted", label: "AI-assisted", color: css("--ai") }, { key: "bot", label: "Bot", color: css("--bot") }];
+  const weeks = a.weekly.map(w => ({ label: short(w.week_start), title: `Week of ${short(w.week_start)} · ${w.prs_merged} PRs merged · ${w.issues_closed} issues closed`, parts: w }));
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const activity = section("Activity", `Commits on ${r.default_branch}, last ${r.lookback_days} days${a.truncated ? " (capped at 1,000 commits)" : ""}.`,
+    h("div", { class: "kv", style: "margin-bottom:12px" },
+      h("div", {}, h("b", {}, fmt(a.commits_7d)), h("span", {}, "commits 7d")),
+      h("div", {}, h("b", {}, fmt(a.commits_30d)), h("span", {}, "commits 30d")),
+      h("div", {}, h("b", {}, `${a.active_days_30d}/30`), h("span", {}, "active days")),
+      h("div", {}, h("b", {}, a.trend + (a.trend_pct != null ? ` ${a.trend_pct > 0 ? "+" : ""}${a.trend_pct}%` : "")), h("span", {}, "4-week trend"))),
+    legend(akeys), stacked(weeks, akeys, { height: 190, labelEvery: innerWidth < 700 ? 2 : 1 }),
+    h("div", { class: "grid", style: "margin-top:8px" },
+      h("div", {}, h("h3", {}, "By weekday"), hbars(a.by_weekday.map((v, i) => ({ label: days[i], value: v })))),
+      h("div", {}, h("h3", {}, "Contributors"), a.contributors.length ? h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Who"), h("th", {}, "Type"), h("th", { class: "r" }, "Commits"), h("th", { class: "r" }, "Last"))),
+        h("tbody", {}, a.contributors.slice(0, 10).map(c => h("tr", {}, h("td", {}, c.name), h("td", {}, pill(c.kind === "human" ? "none" : c.kind === "ai" ? "medium" : "low", c.kind)), h("td", { class: "r num" }, c.commits), h("td", { class: "r small" }, ago(c.last_at))))))
+        : h("div", { class: "muted" }, "No commits in this window."),
+        h("div", { class: "small muted", style: "margin-top:6px" }, `Authorship: ${a.authorship.human} human, ${a.authorship.ai_assisted} AI-assisted (${pct(a.authorship.ai_share)}), ${a.authorship.bot} bot.`))));
+
+  const p = r.pull_requests;
+  const prRow = (x, extra) => h("tr", {}, h("td", {}, link(x.url, "#" + x.number)), h("td", {}, x.title, x.draft ? " " : null, x.draft ? pill("none", "draft") : null), h("td", { class: "small" }, x.author), h("td", { class: "r small" }, extra(x)));
+  const delivery = section("Delivery", "Pull-request flow, CI and releases.",
+    h("div", { class: "kv" },
+      h("div", {}, h("b", {}, p.open), h("span", {}, `open PRs (${p.open_draft} draft)`)),
+      h("div", {}, h("b", {}, p.merged_30d), h("span", {}, "merged 30d")),
+      h("div", {}, h("b", {}, p.median_hours_to_merge_30d == null ? "–" : p.median_hours_to_merge_30d + "h"), h("span", {}, "median time to merge")),
+      h("div", {}, h("b", {}, p.closed_unmerged_30d), h("span", {}, "closed unmerged 30d"))),
+    p.stale.length ? h("div", {}, h("h3", {}, "Stale pull requests (idle 7+ days)"), h("div", { class: "scroll" }, h("table", {}, h("tbody", {}, p.stale.map(x => prRow(x, x => `idle ${x.idle_days}d`)))))) : null,
+    p.open_list.length ? h("div", {}, h("h3", {}, "Open pull requests"), h("div", { class: "scroll" }, h("table", {}, h("tbody", {}, p.open_list.map(x => prRow(x, x => `${x.age_days}d old`)))))) : null,
+    p.recent_merged.length ? h("div", {}, h("h3", {}, "Merged in the last 14 days"), h("div", { class: "scroll" }, h("table", {}, h("tbody", {}, p.recent_merged.map(x => prRow(x, x => ago(x.merged_at))))))) : null,
+    h("h3", {}, "CI (GitHub Actions)"),
+    r.ci.known ? h("div", {},
+      h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px" }, pill(r.ci.default_branch_status, r.default_branch + " " + r.ci.default_branch_status),
+        h("span", { class: "small muted" }, `${r.ci.runs_in_lookback} runs (${r.ci.runs_per_week}/week) · ${pct(r.ci.success_rate)} pass · median ${r.ci.median_duration_minutes == null ? "–" : r.ci.median_duration_minutes + " min"}`)),
+      r.ci.workflows.length ? h("div", { class: "scroll" }, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Workflow"), h("th", { class: "r" }, "Runs"), h("th", { class: "r" }, "Pass rate"), h("th", {}, "Last"))),
+        h("tbody", {}, r.ci.workflows.map(w => h("tr", {}, h("td", {}, link(w.url, w.name)), h("td", { class: "r num" }, w.runs), h("td", { class: "r num" }, pct(w.success_rate)), h("td", {}, pill(w.last_conclusion === "success" ? "passing" : w.last_conclusion ? "failing" : "none", w.last_conclusion || "running"), " ", h("span", { class: "small muted" }, ago(w.last_at)))))))) : h("div", { class: "muted" }, "No workflow runs in this window.")
+    ) : h("div", { class: "muted" }, "CI runs aren't visible to this token."),
+    h("h3", {}, "Releases"),
+    h("div", { class: "small" }, r.releases.latest_tag ? h("span", {}, "Latest ", link(r.releases.url, r.releases.latest_tag), ` · ${ago(r.releases.latest_at)} · ${r.releases.count_in_lookback} in the last ${r.lookback_days} days`) : h("span", { class: "muted" }, "No published releases. Tag releases on GitHub to track shipping cadence.")));
+
+  const pr = r.progress;
+  const progress = section("Progress", pr.note || "Milestone completion and forecast from the last 30 days' closing rate.",
+    h("div", { class: "kv", style: "margin-bottom:10px" },
+      h("div", {}, h("b", {}, pr.open_milestones_percent == null ? "–" : pr.open_milestones_percent + "%"), h("span", {}, "open milestones done")),
+      h("div", {}, h("b", {}, pr.throughput_per_week), h("span", {}, "items done / week")),
+      h("div", {}, h("b", {}, pr.milestones.filter(m => m.state === "open").length), h("span", {}, "open milestones")),
+      h("div", {}, h("b", {}, pr.milestones.filter(m => m.overdue).length), h("span", {}, "overdue"))),
+    pr.milestones.map(m => h("div", { style: "padding:8px 0;border-top:1px solid var(--line)" },
+      h("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, link(m.url, m.title), pill(m.state === "closed" ? "none" : m.overdue ? "red" : m.on_track === false ? "amber" : "green", m.state === "closed" ? "closed" : m.overdue ? "overdue" : m.on_track === false ? "at risk" : "open"),
+        h("span", { class: "num small", style: "margin-left:auto" }, `${m.closed}/${m.open + m.closed} · ${m.percent}%`)),
+      h("div", { class: "bar", style: "margin:6px 0" }, h("i", { style: `width:${m.percent}%` })),
+      h("div", { class: "small muted" }, [m.due_on ? `Due ${date(m.due_on)}${m.days_to_due != null ? ` (${m.days_to_due >= 0 ? "in " + m.days_to_due + " days" : -m.days_to_due + " days ago"})` : ""}` : "No due date",
+        m.forecast_days_to_finish != null ? ` · forecast to finish in ~${m.forecast_days_to_finish} days` : ""].join("")))));
+
+  const is = r.issues;
+  const issues = section("Backlog", is.known ? null : "Issues aren't visible to this token.",
+    h("div", { class: "kv", style: "margin-bottom:10px" },
+      h("div", {}, h("b", {}, is.open), h("span", {}, `open (${is.bugs_open} bugs)`)),
+      h("div", {}, h("b", {}, `${is.opened_30d}/${is.closed_30d}`), h("span", {}, "opened / closed 30d")),
+      h("div", {}, h("b", { style: is.net_30d > 0 ? "color:var(--amber)" : "" }, (is.net_30d > 0 ? "+" : "") + is.net_30d), h("span", {}, "net change 30d")),
+      h("div", {}, h("b", {}, is.median_days_to_close_30d == null ? "–" : is.median_days_to_close_30d + "d"), h("span", {}, "median time to close"))),
+    h("div", { class: "grid" },
+      h("div", {}, h("h3", {}, "Open issue age"), hbars(is.aging.map(b => ({ label: b.label, value: b.count })))),
+      h("div", {}, h("h3", {}, "Top labels"), is.by_label.length ? hbars(is.by_label.map(l => ({ label: l.label, value: l.count }))) : h("div", { class: "muted small" }, "No labelled open issues."),
+        h("div", { class: "small muted", style: "margin-top:6px" }, `${is.unlabeled_open} unlabelled · ${is.unassigned_open} unassigned`))),
+    is.oldest.length ? h("div", {}, h("h3", {}, "Oldest open issues"), h("table", {}, h("tbody", {}, is.oldest.map(x => h("tr", {}, h("td", {}, link(x.url, "#" + x.number)), h("td", {}, x.title), h("td", { class: "r small" }, x.age_days + "d")))))) : null);
+
+  const hy = r.hygiene, sec = r.security;
+  const chk = (ok, label) => h("div", { class: ok ? "ok" : "" }, label);
+  const sevs = (s) => `${s.critical} critical · ${s.high} high · ${s.medium} medium · ${s.low} low`;
+  const security = section("Security and repo setup", null,
+    h("h3", { style: "margin-top:0" }, "Open alerts"),
+    h("div", { class: "small", style: "display:grid;gap:4px" },
+      h("div", {}, "Dependabot: ", sec.dependabot_known ? sevs(sec.dependabot) : h("span", { class: "muted" }, "not visible to this token")),
+      h("div", {}, "Code scanning: ", sec.code_scanning_known ? sevs(sec.code_scanning) : h("span", { class: "muted" }, "not visible (or not enabled)")),
+      h("div", {}, "Secret scanning: ", sec.secret_scanning_known ? `${sec.secret_scanning_open} open` : h("span", { class: "muted" }, "not visible (or not enabled)"))),
+    sec.top_alerts.length ? h("table", { style: "margin-top:8px" }, h("tbody", {}, sec.top_alerts.map(x => h("tr", {}, h("td", {}, pill(x.severity === "critical" || x.severity === "high" ? "high" : x.severity === "medium" ? "medium" : "low", x.severity)), h("td", {}, link(x.url, x.title)), h("td", { class: "small muted" }, x.source))))) : null,
+    h("h3", {}, "Repo setup" + (hy.known ? ` · community health ${hy.community_health_percent}%` : "")),
+    h("div", { class: "checks small" }, chk(hy.readme, "README"), chk(hy.license, "License"), chk(hy.contributing, "Contributing guide"), chk(hy.issue_template, "Issue template"), chk(hy.pr_template, "PR template"), chk(hy.default_branch_protected, "Default branch protected")),
+    h("div", { class: "small muted", style: "margin-top:8px" }, `${hy.branches} branches · ${fmt(hy.size_kb)} KB`),
+    r.data_gaps.length ? h("div", {}, h("h3", {}, "Data this token can't see"), h("ul", { class: "small muted", style: "margin:0;padding-left:18px" }, r.data_gaps.map(g => h("li", {}, g)))) : null);
+
+  const product = r.kind !== "profile";
+  $app.replaceChildren(head, h("div", { class: "grid two" }, health, risks), activity,
+    product ? h("div", { class: "grid two" }, delivery, progress) : null, product ? h("div", { class: "grid two" }, issues, security) : security);
+}
+
+// ---------- routing & loading ----------
+async function route() {
+  const m = location.hash.match(/^#\/p\/([a-z0-9_-]+)$/);
+  try {
+    if (m) {
+      $app.classList.add("loading");
+      const r = cache[m[1]] || (cache[m[1]] = await api("/api/projects/" + m[1]));
+      renderProject(r);
+      document.title = r.name + " · Project Pulse";
+    } else {
+      PORT = PORT || await api("/api/portfolio");
+      renderPortfolio(PORT);
+      document.title = "Project Pulse";
+    }
+    const at = (PORT && PORT.generated_at) || (cache[m && m[1]] || {}).generated_at;
+    $meta.textContent = at ? "Data from " + new Date(at).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }) : "";
+  } catch (e) {
+    $app.replaceChildren(h("div", { class: "panel err" }, h("h2", {}, "Couldn't load data"), e.message, h("div", { class: "small muted", style: "margin-top:8px" }, "Check GITHUB_TOKEN in your .env and the container logs, then press Refresh.")));
+  } finally { $app.classList.remove("loading"); window.scrollTo(0, 0); }
+}
+
+document.getElementById("refresh").addEventListener("click", async (e) => {
+  const b = e.currentTarget; b.disabled = true; b.textContent = "Refreshing…";
+  try { await api("/api/refresh", { method: "POST" }); PORT = null; for (const k in cache) delete cache[k]; await route(); }
+  catch (err) { $meta.textContent = "Refresh failed: " + err.message; }
+  finally { b.disabled = false; b.textContent = "Refresh from GitHub"; }
+});
+addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

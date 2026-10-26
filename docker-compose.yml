@@ -1,0 +1,14 @@
+services:
+  pulse:
+    build: .
+    image: project-pulse:local
+    container_name: project-pulse
+    env_file: .env
+    # Bound to localhost only: the dashboard is reachable from this machine,
+    # not from your network or the internet.
+    ports:
+      - "127.0.0.1:${PULSE_PORT:-8080}:8080"
+    # Edit projects.json and run `docker compose restart` - no rebuild needed.
+    volumes:
+      - ./projects.json:/app/projects.json:ro
+    restart: "no"

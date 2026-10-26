@@ -1,0 +1,35 @@
+{
+  "lookback_days": 90,
+  "projects": [
+    {
+      "name": "home-residency",
+      "repo": "KING-CYBERTON/home-residency",
+      "kind": "product",
+      "description": "Home management platform for Kenyan households: vetted domestic workers and home service providers"
+    },
+    {
+      "name": "ayopa",
+      "repo": "KING-CYBERTON/ayopa",
+      "kind": "product",
+      "description": "Multi-tenant subdomain platform (Go, Terraform, Docker)"
+    },
+    {
+      "name": "soko-huru",
+      "repo": "KING-CYBERTON/soko_huru",
+      "kind": "product",
+      "description": "Soko Huru"
+    },
+    {
+      "name": "erp",
+      "repo": "KING-CYBERTON/Retail-and-whole-sale-erp",
+      "kind": "product",
+      "description": "Retail and wholesale ERP"
+    },
+    {
+      "name": "profile",
+      "repo": "KING-CYBERTON/KING-CYBERTON",
+      "kind": "profile",
+      "description": "GitHub profile README"
+    }
+  ]
+}
